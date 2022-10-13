@@ -936,16 +936,19 @@ class WP_REST_Glassbox_Controller extends WP_REST_Controller {
 		return $excerpt;
 	}
 
-	protected function get_last_in_72_hours() {
-		$error = new WP_Error(
+	protected function throwGlassboxError($query_error) {
+		new WP_Error(
 			'invalid_posts_in_72_hours',
-			__( 'There was a problem querying the posts in the last 72 hours.' ),
+			__( 'There was a problem querying the posts in the last 72 hours.' . $query_error ),
 			array( 'status' => 404 )
 		);
+	}
+
+	protected function get_last_in_72_hours() {
 
 		$parent =  (new WP_Query( [ 'date_query' => [ [ 'column' => 'post_modified_gmt', 'after' => '3 days ago' ] ] ] ) ) -> posts;
 		if ( empty( $parent ) ) {
-			return $error;
+			return $this->throwGlassboxError(strval($parent));
 		}
 
 		return $parent;

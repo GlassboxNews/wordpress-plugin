@@ -48,8 +48,31 @@ class Glassbox_Loader {
 	 */
 	public function __construct() {
 
-		$this->actions = array();
-		$this->filters = array();
+		$this->actions = array(
+			array(
+				'hook'          => 'init',
+				'component'     => $this,
+				'callback'      => 'glassbox_root_redirect',
+				'priority'      => 0,
+				'accepted_args' => 0
+			),
+			array(
+				'hook'          => 'template_redirect',
+				'component'     => $this,
+				'callback'      => 'glassbox_endpoints_redirect',
+				'priority'      => 0,
+				'accepted_args' => 0
+			)
+		);
+		$this->filters = array(
+			array(
+			'hook'          => 'query_vars',
+			'component'     => $this,
+			'callback'      => 'glassbox_query_vars',
+			'priority'      => 0,
+			'accepted_args' => 1
+			)
+	    );
 
 	}
 
@@ -124,6 +147,42 @@ class Glassbox_Loader {
 			add_action( $hook['hook'], array( $hook['component'], $hook['callback'] ), $hook['priority'], $hook['accepted_args'] );
 		}
 
+	}
+
+	/**
+	 * Add new query var for Glassbox.
+	 *
+	 * @param array $query_vars
+	 * @return array
+	 */
+	public function glassbox_query_vars( $query_vars ) {
+		$query_vars[] = 'glassbox';
+		return $query_vars;
+	}
+
+	/**
+	 * Add new redirect for glassbox
+	 *
+	 * @return void
+	 */
+	public function glassbox_root_redirect() {
+		add_rewrite_rule("^glassbox/?$", "index.php?rest_route=/wp/v2/glassbox", 'top');
+		add_rewrite_endpoint("glassbox",  EP_PERMALINK | EP_PAGES);
+		flush_rewrite_rules();
+	}
+
+	public function glassbox_endpoints_redirect() {
+		global $wp_query;
+
+		// if this is not a request for json or it's not a singular object then bail
+		if ( ! isset( $wp_query->query_vars['glassbox'] ) || ! is_singular() ){
+			return;
+		}
+		// redirect to wp-json registered endpoint for Glassbox
+		$post = get_queried_object();
+		$url = "/wp-json/wp/v2/posts/{$post->ID}/glassbox";
+		wp_redirect( $url );
+		exit;
 	}
 
 }
